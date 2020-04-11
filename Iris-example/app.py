@@ -6,6 +6,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from collections import OrderedDict
 
 app = Flask(__name__)
 api = Api(app)
@@ -20,28 +21,60 @@ with open('dev.speakai.api.json') as f:
 def figure_out_daterange(analytics):
     earliestDate = datetime.now()
     presentDate = datetime.now()
-    for upload in analytics[0]:
+    for upload in analytics:
         if (np.datetime64(upload['createdAt'], 'D') < np.datetime64(earliestDate, 'D')):
             earliestDate = upload['createdAt']
             # print(upload['createdAt'], ' is earlier than ', earliestDate)
 
     return np.arange(np.datetime64(earliestDate), np.datetime64(presentDate), dtype='datetime64[D]')
 
+def compute_activity(analytics, daterange):
+    dictionary = {}  # to hold to activity (value) by date (key)
+    # put initial zero activity on each date
+    for date in daterange:
+        dictionary[date] = {
+            'totalTime': 0,
+            'totalBytes': 0,
+            'totalCount': 0,
+            'sources': [],
+        }
+
+    print('Loop through analytics and count total duration...')
+    for upload in analytics:
+        ref = dictionary[np.datetime64(upload['createdAt'], 'D')]
+        ref['totalTime'] += int(float(upload['duration']['inSecond']))
+        ref['totalCount'] += 1
+        dictionary[np.datetime64(upload['createdAt'], 'D')] = ref
+        #dictionary[datetime(upload.createdAt).date]
+
+    return dictionary
+
 class Generator(Resource):
     @staticmethod
     def get():
         # Obtain analytics data
-        analyticsData = data[0:9]
+        analyticsData = data[0:2][0]
 
         # Generate Graph Specs
         ## figure out date range
-        figure_out_daterange(analyticsData)
+        x = figure_out_daterange(analyticsData)
+
+        ## figure out activity
+        activityData = compute_activity(analyticsData, x)
+
+        ## map activity per total upload time
+        def totalTime(a):
+            return a['totalTime']
+
+        f_of_x = map(totalTime, activityData)
+
+        print(f_of_x)
 
         return jsonify({
-            'data': analyticsData[0],
+            # 'x': x,
+            'f_of_x': OrderedDict(f_of_x),
             'specs': 'Vega Graph Specs! '
         })
-
 
 api.add_resource(Generator, '/graph')
 
