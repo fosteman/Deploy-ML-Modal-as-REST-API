@@ -1,6 +1,7 @@
 import os
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
+from flask.ext.cors import CORS, cross_origin
 import json
 import altair as alt
 import numpy as np
@@ -9,6 +10,8 @@ from datetime import datetime
 from collections import OrderedDict
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 api = Api(app)
 
 if not os.path.isfile('dev.speakai.api.json'):
@@ -58,9 +61,10 @@ def compute_activity(activityData, by='totalTime'):
 
 class Generator(Resource):
     @staticmethod
+    @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
     def get():
         # Obtain analytics data
-        analyticsData = data[0:2][0]
+        analyticsData = data[0]
 
         # Generate Graph Specs
         ## figure out date range
