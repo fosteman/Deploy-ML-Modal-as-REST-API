@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime
 from collections import OrderedDict
 
-app = Flask(__name__)
+app = Flask('iris')
 api = Api(app)
 
 if not os.path.isfile('dev.speakai.api.json'):
@@ -82,13 +82,11 @@ class Generator(Resource):
             y = 'f(x)'
         )
 
-        return {
-            'specs': graph_spec.to_json()
-        }
+        return graph_spec.to_json()
+
 
 api.add_resource(Generator, '/graph')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+app.run(port=5000)
 
 
