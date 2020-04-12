@@ -1,14 +1,13 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from flask_restful import Api, Resource
 import json
 import altair as alt
+from altair_saver import save
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from collections import OrderedDict
-
 app = Flask(__name__)
 CORS(app)
 api = Api(app)
@@ -58,37 +57,44 @@ def compute_activity(activityData, by='totalTime'):
         activity.append(activityData[upload].get(by))
     return activity
 
-class Generator(Resource):
-    @staticmethod
-    def get():
-        # Obtain analytics data
-        analyticsData = data[0]
+def create_specs(width='container', height='container'):
+    # Obtain analytics data
+    analyticsData = data[0]
 
-        # Generate Graph Specs
-        ## figure out date range
-        x = figure_out_daterange(analyticsData)
+    # Generate Graph Specs
+    ## figure out date range
+    x = figure_out_daterange(analyticsData)
 
-        ## compute activity data
-        activityData = compute_activity_data(analyticsData, x)
+    ## compute activity data
+    activityData = compute_activity_data(analyticsData, x)
 
-        ## compute activity
-        f_of_x = compute_activity(activityData, 'totalTime')
+    ## compute activity
+    f_of_x = compute_activity(activityData, 'totalTime')
 
-        ## generate graph specs
-        graph_data = pd.DataFrame({
-            'Date': x,
-            'Total Time Uploaded': f_of_x,
-        })
-        graph_spec = alt.Chart(graph_data).mark_line().encode(
-            x = 'Date',
-            y = 'Total Time Uploaded'
-        ).properties(  ## customize the graph view
-            width='container',
-            height='container'
-        )
+    ## generate graph specs
+    graph_data = pd.DataFrame({
+        'Date': x,
+        'Total Time Uploaded': f_of_x,
+    })
+    graph_spec = alt.Chart(graph_data).mark_line().encode(
+        x='Date',
+        y='Total Time Uploaded'
+    ).properties(  ## customize the graph view
+        width = width,
+        height = height
+    )
+    return graph_spec
 
-        return graph_spec.to_json()
+@app.route('/specs')
+def specs():
+    return create_specs(width='container', height='container').to_json()
+
+@app.route('/image')
+def image():
+    filename = '/tmp/graph.png'
+    graph = create_specs(width=1280, height=720)
+    save(graph, fp=filename, fmt='png')
+    return send_file(filename, mimetype='image/png')
 
 
-api.add_resource(Generator, '/')
 
