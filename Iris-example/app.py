@@ -28,7 +28,7 @@ def figure_out_daterange(analytics):
 
     return np.arange(np.datetime64(earliestDate), np.datetime64(presentDate), dtype='datetime64[D]')
 
-def compute_activity(analytics, daterange):
+def compute_activity_data(analytics, daterange):
     dictionary = {}  # to hold to activity (value) by date (key)
     # put initial zero activity on each date
     for date in daterange:
@@ -44,10 +44,17 @@ def compute_activity(analytics, daterange):
         ref = dictionary[np.datetime64(upload['createdAt'], 'D')]
         ref['totalTime'] += int(float(upload['duration']['inSecond']))
         ref['totalCount'] += 1
-        dictionary[np.datetime64(upload['createdAt'], 'D')] = ref
+        key = np.datetime64(upload['createdAt'], 'D')
+        dictionary[key] = ref
         #dictionary[datetime(upload.createdAt).date]
 
     return dictionary
+
+def compute_activity(activityData, by='totalTime'):
+    activity = []
+    for upload in activityData:
+        activity.append(activityData[upload].get(by))
+    return activity
 
 class Generator(Resource):
     @staticmethod
@@ -59,22 +66,25 @@ class Generator(Resource):
         ## figure out date range
         x = figure_out_daterange(analyticsData)
 
-        ## figure out activity
-        activityData = compute_activity(analyticsData, x)
+        ## compute activity data
+        activityData = compute_activity_data(analyticsData, x)
 
-        ## map activity per total upload time
-        def totalTime(a):
-            return a['totalTime']
+        ## compute activity
+        f_of_x = compute_activity(activityData, 'totalTime')
 
-        f_of_x = map(totalTime, activityData)
-
-        print(f_of_x)
-
-        return jsonify({
-            # 'x': x,
-            'f_of_x': OrderedDict(f_of_x),
-            'specs': 'Vega Graph Specs! '
+        ## generate graph specs
+        graph_data = pd.DataFrame({
+            'x': x,
+            'f(x)': f_of_x,
         })
+        graph_spec = alt.Chart(graph_data).mark_line().encode(
+            x = 'x',
+            y = 'f(x)'
+        )
+
+        return {
+            'specs': graph_spec.to_json()
+        }
 
 api.add_resource(Generator, '/graph')
 
