@@ -82,6 +82,9 @@ class Generator(Resource):
         graph_spec = alt.Chart(graph_data).mark_line().encode(
             x = 'Date',
             y = 'Total Time Uploaded'
+        ).properties(  ## customize the graph view
+            width='container',
+            height='container'
         )
 
         return graph_spec.to_json()
