@@ -76,12 +76,12 @@ class Generator(Resource):
 
         ## generate graph specs
         graph_data = pd.DataFrame({
-            'x': x,
-            'f(x)': f_of_x,
+            'Date': x,
+            'Total Time Uploaded': f_of_x,
         })
         graph_spec = alt.Chart(graph_data).mark_line().encode(
-            x = 'x',
-            y = 'f(x)'
+            x = 'Date',
+            y = 'Total Time Uploaded'
         )
 
         return graph_spec.to_json()
